@@ -85,7 +85,7 @@ function processBugs(err, result) {
 
 var margin = {top: 20, right: 50, bottom: 30, left: 50},
     width = document.body.clientWidth - margin.left - margin.right,
-    height = 500 - margin.top - margin.bottom;
+    height = 800 - margin.top - margin.bottom;
 
 var x = d3.time.scale()
     .range([0, width]);
@@ -116,6 +116,16 @@ var line = d3.svg.line()
     .x(function(d) { return x(d.when); })
     .y(function(d) {return ageScale(d.average); });
 var stack = d3.layout.stack()
+    .order(function(data) {
+      var toSort = data.map(function(values, i) {
+        return {
+          order: i,
+          value: values[values.length - 1][1]
+        };
+      });
+      toSort.sort(function(l, r) {return r.value - l.value;});
+      return toSort.map(function(entry) {return entry.order;});
+    })
     .values(function(d) { return d.values; });
 var stackarea = d3.svg.area()
     .x(function(d) { return x(d.when); })
