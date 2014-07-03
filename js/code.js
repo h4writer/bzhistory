@@ -74,7 +74,7 @@ function processBugs(err, result) {
 
 
 var margin = {top: 20, right: 50, bottom: 30, left: 50},
-    width = 960 - margin.left - margin.right,
+    width = document.body.clientWidth - margin.left - margin.right,
     height = 500 - margin.top - margin.bottom;
 
 var x = d3.time.scale()
@@ -117,6 +117,7 @@ var svg = d3.select("body").append("svg")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
 function showHistory() {
+  document.querySelector('.spinner').style.display = 'none';
   x.domain(d3.extent(bugsOverTime, function(d) { return d.when; }));
   y.domain([-mostClosedBugs, mostOpenBugs]);
   y2.domain(d3.extent(averageBugAge, function(d) {
