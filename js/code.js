@@ -2,7 +2,8 @@
 
 var rest = 'https://bugzilla.mozilla.org/rest/',
     bugquery = rest + 'bug?include_fields=' +
-        'id,summary,cf_last_resolved,creation_time,assigned_to',
+        'id,summary,cf_last_resolved,creation_time,assigned_to' +
+        '&resolution=---&resolution=FIXED',
     confquery = rest + 'product?include_fields=' +
         'name,components.name&type=selectable';
 var debug = '';//'&chfieldto=Now&chfield=[Bug creation]&chfieldfrom=2013-06-01';
@@ -11,7 +12,7 @@ d3.json(bugquery + '&component=Elmo'+debug, processBugs);
 
 var historyData = [];
 var summaries = {};
-var bugsOverTime, averageBugAge = [];
+var bugsOverTime, averageBugAge = [], assignedOverTime = [], assignees;
 var mostOpenBugs = 0, mostClosedBugs;
 
 function processBugs(err, result) {
@@ -42,6 +43,7 @@ function processBugs(err, result) {
     historyData.sort(function(bug1, bug2) {return bug1.when - bug2.when;});
     var counts = {up: 0, down: 0};
     var openBugs = {};
+    var assignedBugs = {};
     bugsOverTime = historyData.map(function(bug) {
        if (bug.op === 'NEW') {
            ++counts.up;
@@ -52,6 +54,14 @@ function processBugs(err, result) {
            ++counts.down;
            delete openBugs[bug.id];
            mostClosedBugs = counts.down;
+           assignedBugs[bug.who] = (assignedBugs[bug.who] || 0) + 1;
+           var _entry = {
+               when: bug.when
+           };
+           for (var p in assignedBugs) {
+               _entry[p] = assignedBugs[p];
+           }
+           assignedOverTime.push(_entry);
        }
        var openDays = 0;
        for (var bug_id in openBugs) {
@@ -84,6 +94,7 @@ var openBugsScale = d3.scale.linear()
     .range([height, height/2, 0]);
 var ageScale = d3.scale.linear()
     .range([height, 0]);
+var color = d3.scale.category20();
 
 var xAxis = d3.svg.axis()
     .scale(x)
@@ -101,16 +112,21 @@ var area = d3.svg.area()
     .x(function(d) { return x(d.when); })
     .y0(function(d) {return openBugsScale(0); })
     .y1(function(d) { return openBugsScale(d.up); });
-var area2 = d3.svg.area()
-    .interpolate('step-after')
-    .x(function(d) { return x(d.when); })
-    .y0(function(d) {return openBugsScale(-d.down); })
-    .y1(function(d) { return openBugsScale(0); });
 var line = d3.svg.line()
     .x(function(d) { return x(d.when); })
     .y(function(d) {return ageScale(d.average); });
+var stack = d3.layout.stack()
+    .values(function(d) { return d.values; });
+var stackarea = d3.svg.area()
+    .x(function(d) { return x(d.when); })
+    .y0(function(d) {
+      return openBugsScale(-d.y0);
+      })
+    .y1(function(d) {
+      return openBugsScale(-d.y0 - d.y);
+      });
 
-var svg = d3.select("body").append("svg")
+var svg = d3.select("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
   .append("g")
@@ -123,15 +139,34 @@ function showHistory() {
   ageScale.domain(d3.extent(averageBugAge, function(d) {
       return d.average;
   }));
+  color.domain(d3.keys(assignedOverTime[assignedOverTime.length - 1])
+    .filter(function(key) { return key !== "when"; }));
+  assignees = stack(color.domain().map(
+    function(name) {
+      return {
+        name: name,
+        values:assignedOverTime.map(function(d){
+          return {
+            when: d.when,
+            y: d[name] || 0
+          };
+        })
+      };
+    }
+  ));
+  svg.selectAll(".assigned")
+      .data(assignees).enter().append("g")
+      .attr("class", "assigned")
+    .append("path")
+      .attr("class", "area")
+      .attr("d", function(d) { return stackarea(d.values); })
+      .style("fill", function(d) { return color(d.name); })
+      .append("title").text(function(d) { return d.name; });
 
   svg.append("path")
       .datum(bugsOverTime)
       .attr("class", "open")
       .attr("d", area);
-  svg.append("path")
-      .datum(bugsOverTime)
-      .attr("class", "closed")
-      .attr("d", area2);
   svg.append("path")
       .datum(averageBugAge)
       .attr("class", "average")
