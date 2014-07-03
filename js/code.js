@@ -80,35 +80,35 @@ var margin = {top: 20, right: 50, bottom: 30, left: 50},
 var x = d3.time.scale()
     .range([0, width]);
 
-var y = d3.scale.linear()
-    .range([height, 0]);
-var y2 = d3.scale.linear()
+var openBugsScale = d3.scale.linear()
+    .range([height, height/2, 0]);
+var ageScale = d3.scale.linear()
     .range([height, 0]);
 
 var xAxis = d3.svg.axis()
     .scale(x)
     .orient("bottom");
 
-var yAxis = d3.svg.axis()
-    .scale(y)
+var openBugsAxis = d3.svg.axis()
+    .scale(openBugsScale)
     .orient("left");
-var yAxisRight = d3.svg.axis()
-    .scale(y2)
+var ageAxis = d3.svg.axis()
+    .scale(ageScale)
     .orient("right");
 
 var area = d3.svg.area()
     .interpolate('step-after')
     .x(function(d) { return x(d.when); })
-    .y0(function(d) {return y(0); })
-    .y1(function(d) { return y(d.up); });
+    .y0(function(d) {return openBugsScale(0); })
+    .y1(function(d) { return openBugsScale(d.up); });
 var area2 = d3.svg.area()
     .interpolate('step-after')
     .x(function(d) { return x(d.when); })
-    .y0(function(d) {return y(-d.down); })
-    .y1(function(d) { return y(0); });
+    .y0(function(d) {return openBugsScale(-d.down); })
+    .y1(function(d) { return openBugsScale(0); });
 var line = d3.svg.line()
     .x(function(d) { return x(d.when); })
-    .y(function(d) {return y2(d.average); });
+    .y(function(d) {return ageScale(d.average); });
 
 var svg = d3.select("body").append("svg")
     .attr("width", width + margin.left + margin.right)
@@ -119,8 +119,8 @@ var svg = d3.select("body").append("svg")
 function showHistory() {
   document.querySelector('.spinner').style.display = 'none';
   x.domain(d3.extent(bugsOverTime, function(d) { return d.when; }));
-  y.domain([-mostClosedBugs, mostOpenBugs]);
-  y2.domain(d3.extent(averageBugAge, function(d) {
+  openBugsScale.domain([-mostClosedBugs, 0, mostOpenBugs]);
+  ageScale.domain(d3.extent(averageBugAge, function(d) {
       return d.average;
   }));
 
@@ -144,7 +144,7 @@ function showHistory() {
 
   svg.append("g")
       .attr("class", "y axis")
-      .call(yAxis)
+      .call(openBugsAxis)
     .append("text")
       .attr("transform", "rotate(-90)")
       .attr("y", 6)
@@ -154,7 +154,7 @@ function showHistory() {
   svg.append("g")
       .attr("class", "y axis")
       .attr("transform", "translate(" + width + ",0)")
-      .call(yAxisRight)
+      .call(ageAxis)
     .append("text")
       .attr("transform", "rotate(-90)")
       .attr("y", 6)
