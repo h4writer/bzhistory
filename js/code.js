@@ -8,7 +8,7 @@ var rest = 'https://bugzilla.mozilla.org/rest/',
         'name,components.name&type=selectable';
 var debug = '';//'&chfieldto=Now&chfield=[Bug creation]&chfieldfrom=2013-06-01';
 
-d3.json(bugquery + '&component=Elmo'+debug, processBugs);
+d3.json(bugquery + '&component=JavaScript Engine%3A JIT'+debug, processBugs);
 
 var historyData = [];
 var summaries = {};
